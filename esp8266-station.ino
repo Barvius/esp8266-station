@@ -1,14 +1,14 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266httpUpdate.h>
+#include <ESP8266WebServer.h>
 #include <Wire.h>
 #include <Adafruit_BMP085.h>
 
-const char* ssid     = "2.4G";
-const char* password = "***";
+#define CONFIG_PIN 13
 
 Adafruit_BMP085 bmp;
-
+ESP8266WebServer HTTP(80);
 
 void ConnectWiFi() {
   //
@@ -28,9 +28,9 @@ void ConnectWiFi() {
   //    }
   //  }
   Serial.print("Connecting to ");
-  Serial.println(ssid);
+  
 
-  WiFi.begin(ssid, password);
+  WiFi.begin();
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -38,7 +38,7 @@ void ConnectWiFi() {
   }
 
   Serial.println("");
-  Serial.println("WiFi connected");
+
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 }
@@ -61,11 +61,11 @@ void UpdateFirmware() {
 }
 
 void SendMeasure() {
-  
+
   HTTPClient httpClient;
   httpClient.setUserAgent("ShinePhone 1.3 (iPhone; iOS 9.0.2; Scale/1.0)");
 
-//  int deviceCount = sensors.getDeviceCount();  // узнаем количество подключенных градусников
+  //  int deviceCount = sensors.getDeviceCount();  // узнаем количество подключенных градусников
   //sensors.requestTemperatures();
 
   String req = "cid=" + String(ESP.getChipId());
@@ -74,6 +74,8 @@ void SendMeasure() {
   req += bmp.readTemperature();
   req += "&pressure_" + String(ESP.getChipId()) + "=";
   req += bmp.readPressure() / 133.3;
+  req += "&val_" + String(ESP.getChipId()) + "=";
+  req += String(digitalRead(CONFIG_PIN));
   //    for (int i = 0; i <= deviceCount - 1; i++) {
   //      DeviceAddress Address18b20;
   //      sensors.getAddress(Address18b20, i);
@@ -92,15 +94,25 @@ void SendMeasure() {
   httpClient.end();
 }
 
+
 void setup() {
   Serial.begin(115200);
-  ConnectWiFi();
-  bmp.begin();
-  SendMeasure();
-  UpdateFirmware();
-  ESP.deepSleep(20 * 1000 * 1000);
+  Serial.println(WiFi.psk());
+  pinMode(CONFIG_PIN, INPUT);
+  if (digitalRead(CONFIG_PIN) == HIGH) {
+    WiFi.softAP(String("ESP_" + String(ESP.getChipId())).c_str(), String("ESP_" + String(ESP.getChipId())).c_str());
+    ConfigServer();
+  } else {
+    ConnectWiFi();
+    bmp.begin();
+    SendMeasure();
+    UpdateFirmware();
+    ESP.deepSleep(5 * 60 * 1000 * 1000);
+  }
+
 }
 
 void loop() {
-
+  HTTP.handleClient();
+  delay(1);
 }
