@@ -11,25 +11,7 @@ Adafruit_BMP085 bmp;
 ESP8266WebServer HTTP(80);
 
 void ConnectWiFi() {
-  //
-  //  unsigned long wifiConnectStart = millis();
-  //  while (WiFi.status() != WL_CONNECTED) {
-  //    // Check to see if
-  //    if (WiFi.status() == WL_CONNECT_FAILED) {
-  //      Serial.println("Failed to connect to WiFi. Please verify credentials: ");
-  //      delay(10000);
-  //    }
-  //    delay(500);
-  //    Serial.println("...");
-  //    // Only try for 5 seconds.
-  //    if (millis() - wifiConnectStart > 15000) {
-  //      Serial.println("Failed to connect to WiFi");
-  //      return;
-  //    }
-  //  }
-  Serial.print("Connecting to ");
   
-
   WiFi.begin();
 
   while (WiFi.status() != WL_CONNECTED) {
@@ -63,56 +45,53 @@ void UpdateFirmware() {
 void SendMeasure() {
 
   HTTPClient httpClient;
-  httpClient.setUserAgent("ShinePhone 1.3 (iPhone; iOS 9.0.2; Scale/1.0)");
-
-  //  int deviceCount = sensors.getDeviceCount();  // узнаем количество подключенных градусников
-  //sensors.requestTemperatures();
+  httpClient.setUserAgent("ESP8266");
 
   String req = "cid=" + String(ESP.getChipId());
-
+//  Serial.println(bmp.readTemperature());
+//  Serial.println(bmp.readPressure() / 133.3);
   req += "&temperature_" + String(ESP.getChipId()) + "=";
   req += bmp.readTemperature();
   req += "&pressure_" + String(ESP.getChipId()) + "=";
   req += bmp.readPressure() / 133.3;
-  req += "&val_" + String(ESP.getChipId()) + "=";
-  req += String(digitalRead(CONFIG_PIN));
-  //    for (int i = 0; i <= deviceCount - 1; i++) {
-  //      DeviceAddress Address18b20;
-  //      sensors.getAddress(Address18b20, i);
-  //      String tmp = "";
-  //      String t = "";
-  //      for (int i = 0; i < 8; i++) {
-  //        t = String(Address18b20[i], HEX);
-  //        while ( t.length() < 2)  t = "0" +  t;
-  //        tmp += t;
-  //      }
-  //      req += "&" +tmp+"=";
-  //      req += sensors.getTempC(Address18b20);
-  //    }
-  httpClient.begin("http://192.168.1.141/update.php?" + req);
-  httpClient.GET();
+  req += "&voltage_" + String(ESP.getChipId()) + "=";
+  req += String(5.35*((float)analogRead(A0)/1023));
+ 
+ 
+  
+  httpClient.begin("http://192.168.1.141/update_station.php?" + req);
+//  Serial.printf("[HTTP] GET ... code: %d\r\n", httpClient.GET());
+httpClient.GET();
   httpClient.end();
+
+  
 }
 
 
 void setup() {
   Serial.begin(115200);
-  Serial.println(WiFi.psk());
-  pinMode(CONFIG_PIN, INPUT);
-  if (digitalRead(CONFIG_PIN) == HIGH) {
-    WiFi.softAP(String("ESP_" + String(ESP.getChipId())).c_str(), String("ESP_" + String(ESP.getChipId())).c_str());
-    ConfigServer();
-  } else {
+//  while (bmp.begin()) {
+////    delay(500);
+//    Serial.println("errror");
+//  }
+//  Serial.println(WiFi.psk());
+//  Serial.println(5.275*((float)analogRead(A0)/1023));
+//  pinMode(CONFIG_PIN, INPUT);
+//  if (digitalRead(CONFIG_PIN) == HIGH) {
+//    WiFi.softAP(String("ESP_" + String(ESP.getChipId())).c_str(), String("ESP_" + String(ESP.getChipId())).c_str());
+//    ConfigServer();
+//  } 
     ConnectWiFi();
+  
     bmp.begin();
     SendMeasure();
     UpdateFirmware();
-    ESP.deepSleep(5 * 60 * 1000 * 1000);
-  }
+    ESP.deepSleep(1 * 60 * 1000 * 1000);
+//  }
 
 }
 
 void loop() {
-  HTTP.handleClient();
-  delay(1);
+//  HTTP.handleClient();
+//  delay(1);
 }
