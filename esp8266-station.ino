@@ -70,6 +70,9 @@ void SendMeasure() {
   req += "&voltage_" + String(ESP.getChipId()) + "=";
   req += String(5.2 * ((float)analogRead(A0) / 1023));
 
+  req += "&rssi_" + String(ESP.getChipId()) + "=";
+  req += String(WiFi.RSSI());
+
   httpClient.begin("http://192.168.1.141/esp8266/update.php?" + req);
 
   httpClient.GET();
