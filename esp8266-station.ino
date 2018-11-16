@@ -3,11 +3,15 @@
 #include <ESP8266httpUpdate.h>
 #include <ESP8266WebServer.h>
 #include <Wire.h>
-#include <Adafruit_BMP085.h>
+//#include <Adafruit_BMP085.h>
+#include <Adafruit_BME280.h>
+// 0x76 adress !!!!
 
 //#define CONFIG_PIN 13
 
-Adafruit_BMP085 bmp;
+//Adafruit_BMP085 bmp;
+Adafruit_BME280 bme;
+
 ESP8266WebServer HTTP(80);
 
 
@@ -19,7 +23,7 @@ void ConnectWiFi() {
   timer = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - timer < 10000) {
     delay(500);
-    Serial.print(".");
+    //Serial.print(".");
     //    timer = millis();
   }
   if (millis() - timer > 10000) {
@@ -56,11 +60,14 @@ void SendMeasure() {
 
   String req = "cid=" + String(ESP.getChipId());
   req += "&temperature_" + String(ESP.getChipId()) + "=";
-  req += bmp.readTemperature();
+  req += bme.readTemperature();
+
+  req += "&humidity_" + String(ESP.getChipId()) + "=";
+  req += bme.readHumidity();
   
   double P = 0;
   for (int i = 0; i < 5; i++) {
-    P += bmp.readPressure();
+    P += bme.readPressure();
   }
   P /= 5;
   
@@ -95,7 +102,12 @@ void setup() {
 
   ConnectWiFi();
 
-  bmp.begin();
+  //bmp.begin();
+  if (!bme.begin()) {
+    Serial.println("Could not find a valid BMP180 sensor, check wiring!");
+  }
+
+  
   SendMeasure();
   UpdateFirmware();
   ESP.deepSleep(5 * 60 * 1000 * 1000);
